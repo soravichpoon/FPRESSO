@@ -1,7 +1,7 @@
 # multicloud-sso
 SSO Authentication for Multi-Application Hosted in Multi-Clouds
 
-# Deploy dir:
+# deploy dir:
     for cloud deployment.
 
 # sso-proj dir:
