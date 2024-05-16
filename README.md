@@ -1,11 +1,11 @@
 # multicloud-sso
 SSO Authentication for Multi-Application Hosted in Multi-Clouds
 
-Deploy dir:
+# Deploy dir:
     for cloud deployment.
 
-sso-proj dir:
+# sso-proj dir:
     for files that runable in localhost.
 
-sso dir:
+# sso dir:
     for files that ready to deploy format.
