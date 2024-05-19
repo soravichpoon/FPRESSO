@@ -1,3 +1,4 @@
+
 # SSO Authentication for multi-application hosted in multi clouds
 This project proposes a solution for Single Sign-On (SSO) authentication tailored for multi-application environments hosted across diverse cloud providers. Leveraging JSON Web Tokens (JWT) for authentication, our approach stores tokens within cookies for efficient management and persistence. We ensure seamless user access while prioritizing security through SSL (Secure Sockets Layer) encryption to protect cookie transmission for data integrity. Additionally, our system employs authorization binding using Role-Based Access Control (RBAC) to manage user roles and permissions centrally, enhancing the security and granularity of access control across applications.
 
@@ -138,10 +139,11 @@ Set the default project for your Cloud Run service:
 In your source code directory, deploy from source:
 
 ```bash
-   gcloud run deploy --source .
+   gcloud run deploy
 ```
+
 ## Running Tests
-This part using the code in Test folder to test our system. We also include tradional sso system code in this folder, you can use thees code to compare the performance with our system by deploy it to Google Cloud Run by using steps above. You can follow these steps below to run the test for our system.
+This part using the code in Test folder to test our system. We also include tradional sso system code in this folder, you can use these code to compare the performance with our system by deploy it to Google Cloud Run by using steps above. You can follow these steps below to run the test for our system.
 
 Clone the project:
 
@@ -160,3 +162,9 @@ Start the test:
 ```bash
   python <TEST-NAME.py>
 ```
+
+## Authors
+
+- [@peerawichaya](https://github.com/Peerawichaya27)
+- [@soravichpoon](https://github.com/soravichpoon)
+- [@pawatpai](https://github.com/pawatpai)
