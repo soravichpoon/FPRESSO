@@ -160,12 +160,3 @@ Start the test:
 ```bash
   python <TEST-NAME.py>
 ```
-=======
-# deploy dir:
-    for cloud deployment.
-
-# sso-proj dir:
-    for files that runable in localhost.
-
-# sso dir:
-    for files that ready to deploy format.
