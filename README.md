@@ -138,7 +138,7 @@ Set the default project for your Cloud Run service:
 In your source code directory, deploy from source:
 
 ```bash
-   gcloud run deploy
+   gcloud run deploy --source .
 ```
 ## Running Tests
 This part using the code in Test folder to test our system. We also include tradional sso system code in this folder, you can use thees code to compare the performance with our system by deploy it to Google Cloud Run by using steps above. You can follow these steps below to run the test for our system.
