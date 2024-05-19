@@ -64,9 +64,6 @@ def check():
         resp = make_response(redirect('/protected'))
         resp.set_cookie('sso_token', sso_token, httponly=True, secure=True, samesite='Lax')
         return resp
-    else:
-        resp = make_response(redirect('/protected'))
-        return resp
 
 @app.route('/protected')
 @cross_origin()
