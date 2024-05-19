@@ -9,7 +9,7 @@ This part using the code in localhost folder to run our system in localhost. You
 Clone the project:
 
 ```bash
-  git clone https://github.com/Peerawichaya27/SSO_Cookies-JWT
+  git clone https://github.com/soravichpoon/Multicloud-SSO
 ```
 
 Go to the project directory:
@@ -37,7 +37,7 @@ This part using the code in deploy\aws folder to run our authentication_service2
 Clone the project:
 
 ```bash
-  git clone https://github.com/Peerawichaya27/SSO_Cookies-JWT
+  git clone https://github.com/soravichpoon/Multicloud-SSO
 ```
 
 Go to the project directory:
@@ -69,7 +69,7 @@ This part using the code in deploy\aws folder to run our Application3 in AWS App
 Clone the project:
 
 ```bash
-  git clone https://github.com/Peerawichaya27/SSO_Cookies-JWT
+  git clone https://github.com/soravichpoon/Multicloud-SSO
 ```
 
 Go to the project directory:
@@ -115,7 +115,7 @@ This part using the code in deploy\Google_Cloud folder to run our Application1, 
 Clone the project:
 
 ```bash
-  git clone https://github.com/Peerawichaya27/SSO_Cookies-JWT
+  git clone https://github.com/soravichpoon/Multicloud-SSO
 ```
 
 Go to the project directory:
@@ -146,7 +146,7 @@ This part using the code in Test folder to test our system. We also include trad
 Clone the project:
 
 ```bash
-  git clone https://github.com/Peerawichaya27/SSO_Cookies-JWT
+  git clone https://github.com/soravichpoon/Multicloud-SSO
 ```
 
 Go to the test directory:
