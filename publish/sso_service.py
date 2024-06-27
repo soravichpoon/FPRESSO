@@ -123,7 +123,7 @@ def generate_sso_token():
     # hash role permissions
     for apps, user_role in role.items():
         try:
-            role_hash = hashlib.sha256(user_role.encode()).hexdigest()
+            role_hash = hashlib.sha256(','.join(user_role).encode()).hexdigest()
             jwt_token['roles'][apps] = role_hash
             permission_hash = hashlib.sha256(','.join(permissions[apps][user_role]['permissions']).encode()).hexdigest()
             jwt_token['permissions'][apps] = permission_hash

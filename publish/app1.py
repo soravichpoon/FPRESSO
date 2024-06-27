@@ -17,8 +17,8 @@ users = {
     "user1": {"password": "pass1"}
 }
 user_role = {
-    "admin":"8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918",
-    "users":"04f8996da763b7a969b1028ee3007569eaf3a635486ddab211d512c85b9df8fb"
+    "admin":"35a3716d343040c666a071477427535ada70f74ceee8b9d9058d4412cbe40c52",
+    "users":"0b35b922fd1c5853cf65b737f49c49d8ef750946b5939443056d94b3a3510dc6"
 }
 
 user_permission = {

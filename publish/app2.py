@@ -18,8 +18,8 @@ users = {
 }
 
 user_role = {
-    "admin":"8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918",
-    "users":"04f8996da763b7a969b1028ee3007569eaf3a635486ddab211d512c85b9df8fb"
+    "admin":"35a3716d343040c666a071477427535ada70f74ceee8b9d9058d4412cbe40c52",
+    "users":"0b35b922fd1c5853cf65b737f49c49d8ef750946b5939443056d94b3a3510dc6"
 }
 
 user_permission = {
@@ -133,17 +133,7 @@ def protected():
                 return 'Access denied <a href="/">Login</a>', 403
         else:
             return 'Access denied <a href="/">Login</a>', 403    
-        # verify_response = requests.get('http://localhost:8000/verify', headers={'appNo': 'app1'}, cookies={'sso_token': sign_token})
-        # if verify_response.status_code == 200:
-            # print("200")
-            # username = verify_response.json()['username']
-            # role = verify_response.json()['role']  # This will now reflect the role sent by the app
-            # return render_template_string(f'''
-            #     <h1>Protected Content</h1>
-            #     <p>Username: {username}</p>
-            #     <p>Role: {role}</p>
-            #     <a href="/logout">Logout</a>
-            # ''')
+
         return render_template_string(f'''
                 <h1>Protected Content</h1>
                 <p>Username: {username}</p>
