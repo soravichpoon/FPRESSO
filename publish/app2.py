@@ -4,13 +4,32 @@ import requests
 from Crypto.PublicKey import RSA
 from Crypto.Signature import pkcs1_15
 from Crypto.Hash import SHA256
+import base64
+import jwt
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'sso_secret_key'
+ALGORITHM = 'HS256'
 CORS(app)
 
 # Simulated user data
 users = {
-    "user2": {"password": "pass2", "role": "admin"}
+    "user2": {"password": "pass2"}
+}
+
+user_role = {
+    "admin":"8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918",
+    "users":"04f8996da763b7a969b1028ee3007569eaf3a635486ddab211d512c85b9df8fb"
+}
+
+user_permission = {
+    "admin":{"Read, Write, Execute"},
+    "users":{"Write"}
+}
+
+permission_hash = {
+    "admin":"138c4b0b96c01b0715d870c11c0853592aa32137c421e73827821fe14c9aab6e",
+    "users":"0d1279c2e372cf1c8dcc4bef0cf2431eabcb61ddd52cd613673c15eb2cb8a958"
 }
 
 pKey = """-----BEGIN RSA PUBLIC KEY-----
@@ -36,14 +55,44 @@ def home():
         </form>
     ''')
 
-@app.route('/login', methods=['POST','GET'])
+def unpadded_token(padded_token):
+    try:
+        padded_bytes = base64.urlsafe_b64decode(padded_token)
+        token_bytes = padded_bytes[128:-128]
+
+        # print(f"Unpadding: R1={R1.hex()}, R2={R2.hex()}")
+        print(f"Token Bytes: {token_bytes}")
+
+        # No XOR operation is needed here since we are simply removing R1 and R2
+        unperturbed_bytes = token_bytes
+        
+        print(f"Unpadded Token Bytes: {unperturbed_bytes}")
+        unpadded_token = unperturbed_bytes.decode()
+        
+        print(f"Unpadded Token: {unpadded_token}")
+        return unpadded_token
+    except Exception as e:
+        print(f"Error during unpadding: {e}")
+        return None
+
+def verify_token(signed_token):
+    try:
+        token_part, sig_hex = signed_token.rsplit('.', 1)
+        signature = bytes.fromhex(sig_hex)
+        key = RSA.import_key(pKey.strip())
+        hasher = SHA256.new(token_part.encode())
+        pkcs1_15.new(key).verify(hasher, signature)
+        return True
+    except (ValueError, TypeError):
+        return False
+
+@app.route('/login', methods=['POST', 'GET'])
 @cross_origin()
 def login():
     username = request.form['username']
     password = request.form['password']
-    user = users.get(username)
     # Send user data to Authentication Service 1
-    auth_response = requests.post('http://localhost:5001/authenticate', json={'username': username, 'password': password, 'role': user['role'], 'appNo' : 'app2'})
+    auth_response = requests.post('http://localhost:5001/authenticate', json={'username': username, 'password': password, 'appNo' : 'app2'})
     if auth_response.status_code == 200:
         # Authenticate with SSO service
         sso_response = requests.get('http://localhost:5000/authenticate', headers={'username':username, 'appNo': 'app2'})
@@ -51,65 +100,58 @@ def login():
             sso_token = sso_response.json()['sso_token']
             resp = make_response(redirect('/protected'))
             resp.set_cookie('sso_token', sso_token, httponly=True, secure=True, samesite='Lax')
+            print('set cookies success')
             return resp
         return 'SSO Service Error', sso_response.status_code
     return 'Authentication Service Error', auth_response.status_code
 
-def verify_token(signed_token):
-    # Split the token from the signature
-    token_part, sig_hex = signed_token.rsplit('.', 1)
-    
-    # Convert hex signature back to bytes
-    signature = bytes.fromhex(sig_hex)
-    
-    # Load public key
-    key = RSA.import_key(pKey.strip())
-    
-    # Verify the signature
-    hasher = SHA256.new(token_part.encode())
-    try:
-        pkcs1_15.new(key).verify(hasher, signature)
-        return True
-    except (ValueError, TypeError):
-        return False
-
-# Use verify_token in the route where you handle the protected endpoint
 @app.route('/protected')
 @cross_origin()
 def protected():
     token = request.cookies.get('sso_token')
-    if token and verify_token(token):
-        # Decode the JWT part only if the signature is valid
-        token_part = token.rsplit('.', 1)[0]
-        verify_response = requests.get('http://localhost:5000/verify', headers={'appNo': 'app2'}, cookies={'sso_token': token_part})
-        if verify_response.status_code == 200:
-            username = verify_response.json()['username']
-            role = verify_response.json()['role']  # This will now reflect the role sent by the app
-            return render_template_string(f'''
+    sign_token = unpadded_token(token)
+    print(f"sign Token: {sign_token}")
+    if token and verify_token(sign_token):
+        print('ver true')
+        sign_token = sign_token.rsplit('.', 1)[0]
+        print(f"sign Token: {sign_token}")
+        decoded = jwt.decode(sign_token, app.config['SECRET_KEY'], algorithms=[ALGORITHM])
+        username = decoded["userID"]
+        rolehash = decoded['roles']["app2"]
+        permissionhash = decoded['permissions']['app2']
+        if rolehash == user_role["admin"]:
+            role = "admin"
+            if permissionhash == permission_hash["admin"]:
+                permission = user_permission["admin"]
+            else:
+                return 'Access denied <a href="/">Login</a>', 403
+        elif rolehash == user_role["users"]:
+            role = "user"
+            if permissionhash == permission_hash["users"]:
+                permission = user_permission['users']
+            else:
+                return 'Access denied <a href="/">Login</a>', 403
+        else:
+            return 'Access denied <a href="/">Login</a>', 403    
+        # verify_response = requests.get('http://localhost:8000/verify', headers={'appNo': 'app1'}, cookies={'sso_token': sign_token})
+        # if verify_response.status_code == 200:
+            # print("200")
+            # username = verify_response.json()['username']
+            # role = verify_response.json()['role']  # This will now reflect the role sent by the app
+            # return render_template_string(f'''
+            #     <h1>Protected Content</h1>
+            #     <p>Username: {username}</p>
+            #     <p>Role: {role}</p>
+            #     <a href="/logout">Logout</a>
+            # ''')
+        return render_template_string(f'''
                 <h1>Protected Content</h1>
                 <p>Username: {username}</p>
                 <p>Role: {role}</p>
+                <p>Permissions: {permission}</p>
                 <a href="/logout">Logout</a>
             ''')
     return 'Access denied <a href="/">Login</a>', 403
-
-# @app.route('/protected')
-# @cross_origin()
-# def protected():
-#     token = request.cookies.get('sso_token')
-#     # Assuming the app knows its role or fetches it from some configuration
-#     if token:
-#         verify_response = requests.get('http://localhost:5000/verify', headers={'appNo': 'app2'}, cookies={'sso_token': token})
-#         if verify_response.status_code == 200:
-#             username = verify_response.json()['username']
-#             role = verify_response.json()['role']  # This will now reflect the role sent by the app
-#             return render_template_string(f'''
-#                 <h1>Protected Content</h1>
-#                 <p>Username: {username}</p>
-#                 <p>Role: {role}</p>
-#                 <a href="/logout">Logout</a>
-#             ''')
-#     return 'Access denied <a href="/">Login</a>', 403
 
 @app.route('/logout')
 @cross_origin()
@@ -120,3 +162,4 @@ def logout():
 
 if __name__ == '__main__':
     app.run(port=5102, debug=True)
+    

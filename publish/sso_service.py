@@ -2,14 +2,57 @@ from flask import Flask, request, jsonify, make_response, redirect
 from flask_cors import CORS, cross_origin
 import jwt
 import datetime
+import hashlib
+import os
 from Crypto.PublicKey import RSA
 from Crypto.Signature import pkcs1_15
 from Crypto.Hash import SHA256
-import logging
+import base64
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'sso_secret_key'
 ALGORITHM = 'HS256'
+CORS(app)
+
+users_data = {
+    'app1': {
+        'user1': {
+            "app1": "admin",
+            "app2": "user" ,
+            "app3": "user"
+        }
+    },
+    'app2': {
+        'user2': {
+            "app1": "user",
+            "app2": "admin",
+            "app3": "user"
+        }
+    },
+    'app3': {
+        'user3': {
+            "app1": "user",
+            "app2": "user",
+            "app3": "admin"
+        }
+    }
+}
+
+user_permission = {
+    "app1":{
+        "admin":{"permissions" : "Read, Write, Execute"},
+        "user":{"permissions" : "Read, Write"}
+        },
+    "app2":{
+        "admin":{"permissions" : "Read, Write, Execute"},
+        "user":{"permissions" : "Write"}
+        },
+    "app3":{
+        "admin":{"permissions" : "Read, Write, Execute"},
+        "user":{"permissions" : "Read"}
+        }
+    }
+
 
 privKey = """-----BEGIN RSA PRIVATE KEY-----
 MIIEpAIBAAKCAQEA0gr6/AuK3Z+LSQ7sR4z09b4sdb9roDjgKLTkQoa9yjaFO2oJ
@@ -39,93 +82,68 @@ rSJu42q1FJLCR8v2khBClFkTmLd6s5Qdlnqj3w1BT9aVsbF5LG6c0/if4yIX02p3
 hQutUNFFcs3etWKiDRXTSeCMdLBQEbCbAw+xZuU58zypFlfNT3GScA==
 -----END RSA PRIVATE KEY-----"""
 
-CORS(app)
-
-users = {
-    'app1': {'user1' : {"app1": {"role": "admin"},
-                        "app2": {"role": "user"},
-                        "app3": {"role": "user"}}
-            },
-    'app2': {'user2' : {"app1": {"role": "user"},
-                        "app2": {"role": "admin"},
-                        "app3": {"role": "user"}}
-            },
-    'app3': {'user3' : {"app1": {"role": "user"},
-                        "app2": {"role": "user"},
-                        "app3": {"role": "admin"}}
-            }
-    }
 @app.route('/')
 @cross_origin()
 def hello():
     return 'hello'
 
-# @app.route('/authenticate', methods=['GET'])
-# @cross_origin()
-# def authenticate():
-#     username = request.headers.get('username')
-#     app_num = request.headers.get('appNo')
-#     role = users[app_num][username]
-#     # Create SSO token with user details
-#     sso_token = jwt.encode({
-#         'sub': username,
-#         'role': role,
-#         'exp': datetime.datetime.now() + datetime.timedelta(hours=2)
-#     }, app.config['SECRET_KEY'], algorithm=ALGORITHM)
-#     resp = make_response(jsonify({'sso_token': sso_token}))
-#     resp.set_cookie('sso_token', sso_token, httponly=True, secure=True, samesite='None')
-#     return resp
+def sign_token(token):
+    key = RSA.import_key(privKey.strip())
+    hasher = SHA256.new(token.encode())
+    signature = pkcs1_15.new(key).sign(hasher)
+    print(f"sign_token: {token}.{signature.hex()}")
+    return f"{token}.{signature.hex()}"
+
+def pad_token(token):
+    R1 = os.urandom(128)
+    R2 = os.urandom(128)
+    padded_token = R1 + token.encode() + R2
+    print(f"Padding: R1={R1.hex()}, R2={R2.hex()}")
+    return base64.urlsafe_b64encode(padded_token).decode()
 
 @app.route('/authenticate', methods=['GET'])
 @cross_origin()
-def authenticate():
+def generate_sso_token():
     username = request.headers.get('username')
     app_num = request.headers.get('appNo')
-    role = users[app_num][username]
-    # Create SSO token with user details
-    sso_token = jwt.encode({
-        'sub': username,
-        'role': role,
-        'exp': datetime.datetime.now() + datetime.timedelta(hours=2)
-    }, app.config['SECRET_KEY'], algorithm=ALGORITHM)
     
-    # Sign the token
-    try:
-        key = RSA.import_key(privKey.strip())
-        hasher = SHA256.new(sso_token.encode())
-        signature = pkcs1_15.new(key).sign(hasher)
+    if app_num not in users_data or username not in users_data[app_num]:
+        return make_response(jsonify({'error': 'Invalid app number or username'}), 400)
+    
+    role = users_data[app_num][username]
+    permissions = user_permission
+    
+    jwt_token = {
+        "userID": username,
+        "roles": {},
+        "permissions": {},
+        'exp': datetime.datetime.now() + datetime.timedelta(hours=2)
+    }
+    
+    # hash role permissions
+    for apps, user_role in role.items():
+        try:
+            role_hash = hashlib.sha256(user_role.encode()).hexdigest()
+            jwt_token['roles'][apps] = role_hash
+            permission_hash = hashlib.sha256(','.join(permissions[apps][user_role]['permissions']).encode()).hexdigest()
+            jwt_token['permissions'][apps] = permission_hash
+        except KeyError as e:
+            print(f"KeyError: {e}")
+            print(f"app_num: {app_num}, username: {username}, role: {role}, app: {apps}, user_role: {user_role}")
+            return make_response(jsonify({'error': 'Invalid role or permission data'}), 500)
+    
+    # Sign the token with HSM
+    token = jwt.encode(jwt_token, app.config['SECRET_KEY'], algorithm=ALGORITHM)
+    signed_token = sign_token(token)
 
-        # Append signature to the token
-        signed_token = sso_token + '.' + signature.hex()
+    # Padding
+    padded_token = pad_token(signed_token)
+    sso_token = padded_token
 
-        logging.basicConfig(level=logging.DEBUG)
-        logger = logging.getLogger(__name__)
-
-        # Before importing the key
-        logger.debug(f"Importing private key: {privKey}")
-        key = RSA.import_key(privKey.strip())
-
-        resp = make_response(jsonify({'sso_token': signed_token}))
-        resp.set_cookie('sso_token', signed_token, httponly=True, secure=True, samesite='None')
-        return resp
-    except ValueError as e:
-        print(f"Failed to import key: {e}")
-
-@app.route('/verify', methods=['GET'])
-@cross_origin()
-def verify():
-    sso_token = request.cookies.get('sso_token')
-    app_num = request.headers.get('appNo')  # Get role from header
-    try:
-        decoded = jwt.decode(sso_token, app.config['SECRET_KEY'], algorithms=[ALGORITHM])
-        roles = decoded['role']
-        app_role = roles[app_num]['role']
-        return jsonify({'status': 'verified', 'username': decoded['sub'], 'role': app_role}), 200
-        # return jsonify({'status': 'verified', 'username': decoded['sub'], 'role': 'user'}), 200
-    except jwt.ExpiredSignatureError:
-        return jsonify({'status': 'error', 'message': 'Token expired'}), 401
-    except jwt.InvalidTokenError:
-        return jsonify({'status': 'error', 'message': 'Invalid token'}), 401
+    # sso_token = signed_token
+    resp = make_response(jsonify({'sso_token': sso_token}))
+    resp.set_cookie('sso_token', sso_token, httponly=True, secure=True, samesite='None')
+    return resp
 
 if __name__ == '__main__':
     app.run(port=5000, debug=True)
