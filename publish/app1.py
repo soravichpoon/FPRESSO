@@ -1,6 +1,7 @@
 from flask import Flask, request, redirect, make_response, render_template_string, jsonify
 from flask_cors import CORS, cross_origin
 import requests
+import os
 from Crypto.PublicKey import RSA
 from Crypto.Signature import pkcs1_15
 from Crypto.Hash import SHA256
@@ -29,7 +30,6 @@ permission_hash = {
     "admin":"138c4b0b96c01b0715d870c11c0853592aa32137c421e73827821fe14c9aab6e",
     "users":"f6e72ec20d183ec2fcb6a11ec25eb944696ad2ba50569fc7264ad1ee363bf105"
 }
-
 
 pKey = """-----BEGIN RSA PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0gr6/AuK3Z+LSQ7sR4z0
@@ -60,15 +60,15 @@ def unpadded_token(padded_token):
         token_bytes = padded_bytes[128:-128]
 
         # print(f"Unpadding: R1={R1.hex()}, R2={R2.hex()}")
-        print(f"Token Bytes: {token_bytes}")
+        # print(f"Token Bytes: {token_bytes}")
 
         # No XOR operation is needed here since we are simply removing R1 and R2
         unperturbed_bytes = token_bytes
         
-        print(f"Unpadded Token Bytes: {unperturbed_bytes}")
+        # print(f"Unpadded Token Bytes: {unperturbed_bytes}")
         unpadded_token = unperturbed_bytes.decode()
         
-        print(f"Unpadded Token: {unpadded_token}")
+        # print(f"Unpadded Token: {unpadded_token}")
         return unpadded_token
     except Exception as e:
         print(f"Error during unpadding: {e}")
@@ -85,22 +85,23 @@ def verify_token(signed_token):
         return True
     except (ValueError, TypeError):
         return False
-    
+
 @app.route('/login', methods=['POST', 'GET'])
 @cross_origin()
 def login():
     username = request.form['username']
     password = request.form['password']
+    user = users.get(username)
     # Send user data to Authentication Service 1
     auth_response = requests.post('http://localhost:5001/authenticate', json={'username': username, 'password': password, 'appNo' : 'app1'})
     if auth_response.status_code == 200:
         # Authenticate with SSO service
         sso_response = requests.get('http://localhost:5000/authenticate', headers={'username':username, 'appNo': 'app1'})
         if sso_response.status_code == 200:
+            global sso_token
             sso_token = sso_response.json()['sso_token']
             resp = make_response(redirect('/protected'))
             resp.set_cookie('sso_token', sso_token, httponly=True, secure=True, samesite='Lax')
-            print('set cookies success')
             return resp
         return 'SSO Service Error', sso_response.status_code
     return 'Authentication Service Error', auth_response.status_code
@@ -110,11 +111,11 @@ def login():
 def protected():
     token = request.cookies.get('sso_token')
     sign_token = unpadded_token(token)
-    print(f"sign Token: {sign_token}")
+    # print(f"sign Token: {sign_token}")
     if token and verify_token(sign_token):
-        print('ver true')
+        # print('ver true')
         sign_token = sign_token.rsplit('.', 1)[0]
-        print(f"sign Token: {sign_token}")
+        # print(f"sign Token: {sign_token}")
         decoded = jwt.decode(sign_token, app.config['SECRET_KEY'], algorithms=[ALGORITHM])
         username = decoded["userID"]
         rolehash = decoded['roles']["app1"]
@@ -132,7 +133,7 @@ def protected():
             else:
                 return 'Access denied <a href="/">Login</a>', 403
         else:
-            return 'Access denied <a href="/">Login</a>', 403
+            return 'Access denied <a href="/">Login</a>', 403    
 
         return render_template_string(f'''
                 <h1>Protected Content</h1>
