@@ -9,7 +9,6 @@ CORS(app)
 users = {
     "user3": {
         "password_hash": generate_password_hash("pass3"),
-        "role": "admin"
     }
 }
 
@@ -26,8 +25,7 @@ def authenticate():
         # Authentication successful
         return jsonify({
             'status': 'success',
-            'username': username,
-            'role': user['role']
+            'username': username
         }), 200
     else:
         # Authentication failed

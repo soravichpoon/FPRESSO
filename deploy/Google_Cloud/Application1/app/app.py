@@ -60,15 +60,15 @@ def unpadded_token(padded_token):
         token_bytes = padded_bytes[128:-128]
 
         # print(f"Unpadding: R1={R1.hex()}, R2={R2.hex()}")
-        print(f"Token Bytes: {token_bytes}")
+        # print(f"Token Bytes: {token_bytes}")
 
         # No XOR operation is needed here since we are simply removing R1 and R2
         unperturbed_bytes = token_bytes
         
-        print(f"Unpadded Token Bytes: {unperturbed_bytes}")
+        # print(f"Unpadded Token Bytes: {unperturbed_bytes}")
         unpadded_token = unperturbed_bytes.decode()
         
-        print(f"Unpadded Token: {unpadded_token}")
+        # print(f"Unpadded Token: {unpadded_token}")
         return unpadded_token
     except Exception as e:
         print(f"Error during unpadding: {e}")
@@ -132,11 +132,11 @@ def check():
 def protected():
     token = request.cookies.get('sso_token')
     sign_token = unpadded_token(token)
-    print(f"sign Token: {sign_token}")
+    # print(f"sign Token: {sign_token}")
     if token and verify_token(sign_token):
-        print('ver true')
+        # print('ver true')
         sign_token = sign_token.rsplit('.', 1)[0]
-        print(f"sign Token: {sign_token}")
+        # print(f"sign Token: {sign_token}")
         decoded = jwt.decode(sign_token, app.config['SECRET_KEY'], algorithms=[ALGORITHM])
         username = decoded["userID"]
         rolehash = decoded['roles']["app1"]
@@ -154,7 +154,8 @@ def protected():
             else:
                 return 'Access denied <a href="/">Login</a>', 403
         else:
-            return 'Access denied <a href="/">Login</a>', 403
+            return 'Access denied <a href="/">Login</a>', 403    
+
         return render_template_string(f'''
                 <h1>Protected Content</h1>
                 <p>Username: {username}</p>
@@ -172,6 +173,7 @@ def logout():
     resp = make_response(redirect('/'))
     resp.set_cookie('sso_token', '', expires=0)
     return resp
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
