@@ -1,5 +1,5 @@
 
-# SSO Authentication for multi-application hosted in multi clouds
+# Fast and Privacy-Preserving SSO Authentication with Dynamic Load Balancing for Multi-Cloud-based Web Applications.
 This project proposes a solution for Single Sign-On (SSO) authentication tailored for multi-application environments hosted across diverse cloud providers. Leveraging JSON Web Tokens (JWT) for authentication, our approach stores tokens within cookies for efficient management and persistence. We ensure seamless user access while prioritizing security through SSL (Secure Sockets Layer) encryption to protect cookie transmission for data integrity. Additionally, our system employs authorization binding using Role-Based Access Control (RBAC) to manage user roles and permissions centrally, enhancing the security and granularity of access control across applications.
 
 
